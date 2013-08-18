@@ -16,6 +16,8 @@
 	</target>
 
 	<target name="build.test" depends="build">
+		<!-- temporarily turn off secondary cache as railo has a bug -->
+		<replaceregexp file="${src.dir}/coldbox/testing/Application.cfc" match="secondarycacheenabled = true" replace="secondarycacheenabled = false" byline="false" flags="g,s"/>
 		<dependency groupId="org.coldspringframework" artifactId="coldspring" version="1.2" mapping="/coldspring" />
 		<copy todir="${war.target.dir}">
 			<fileset dir="${src.dir}/coldbox/testharness/" />
