@@ -86,7 +86,7 @@
 			title="MockBox ${mockbox.version}" />
 
 		<!-- Zip Bundle -->
-		<zip destfile="${dist.dir}/mockbox_${mockbox.version}.zip" basedir="${mockbox.build.dir}"></zip>
+		<zip destfile="${dist.dir}/mockbox_${mockbox.version}.zip" basedir="${mockbox.build.dir}/mockbox"></zip>
 	</target>
 
 
