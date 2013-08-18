@@ -44,7 +44,7 @@
 			<antcontrib:runtarget target="mxunit.tests.subdirectories" />
 		</server-run>
 		<!-- temporarily turn off secondary cache as railo has a bug -->
-		<replaceregexp file="${dist.dir}/testresults/mxunitdirectorytestsuite_1.xml" match=".*?&lt;testsuite" replace="&lt;testsuite" byline="false" flags="g,s"/>
+		<replaceregexp file="${dist.dir}/testresults/web/mxunitdirectorytestsuite_1.xml" match=".*?&lt;testsuite" replace="&lt;testsuite" byline="false" flags="g,s"/>
 	</target>
 
 	<target name="build.mockbox" depends="coldbox.getversion">
