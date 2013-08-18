@@ -1,0 +1,129 @@
+<project name="distro.build" default="build" basedir="./" xmlns:antcontrib="antlib:net.sf.antcontrib">
+
+	<loadproperties srcfile="build.properties"/>
+	<import file="${cfdistro.build.file}"/>
+	<property name="coldbox.src.dir" location="${src.dir}/coldbox" />
+
+	<target name="coldbox.getversion">
+		<loadfile srcFile="${src.dir}/coldbox/system/web/config/Settings.cfc" property="coldbox.version"/>
+		<antcontrib:propertyregex override="yes" property="coldbox.version" input="${coldbox.version}" 
+			regexp=".*?this.version\s+?=\s+?&quot;([^&quot;]+).*?" select="\1" />
+		<echo message="ColdBox Version: ${coldbox.version}" />
+	</target>
+
+	<target name="build" depends="cfdistro.build">
+		<mapping physical="@src.dir@/coldbox" virtual="/coldbox"/>
+	</target>
+
+	<target name="build.test" depends="">
+		<dependency groupId="org.coldspringframework" artifactId="coldspring" version="1.2" mapping="/coldspring" />
+		<copy todir="${war.target.dir}">
+			<fileset dir="${src.dir}/coldbox/testharness/" />
+		</copy>
+		<railo-cache name="def-obj" class="railo.runtime.cache.eh.EHCache" storage="true" 
+			default-type="default-object"
+	    	custom="${cache.props}"/>
+
+		<railo-cache name="def-tmpl" class="railo.runtime.cache.eh.EHCache" storage="true" 
+			default-type="default-template"
+	    	custom="${cache.props}"/>
+
+		<railo-cache name="def-qry" class="railo.runtime.cache.eh.EHCache" storage="true" 
+			default-type="default-query"
+	    	custom="${cache.props}"/>
+
+		<server-run>
+		<!--
+			<get
+				src="http://${server.host}:${server.port.http}/coldbox/testharness/index.cfm"
+				retries="3" ignoreerrors="true"
+				dest="${temp.dir}/firedUpNowDelMe.html" />
+				-->
+			<antcontrib:runtarget target="mxunit.tests.subdirectories" />
+		</server-run>
+	</target>
+
+	<target name="build.mockbox" depends="coldbox.getversion">
+		<property name="mockbox.build.dir" location="${dist.dir}/mockbox/" />
+		<tstamp prefix="start"/>
+		<property name="mockbox.version" value="${coldbox.version}"/>
+		<property name="build.label" value="mockbox-buildID-${start.DSTAMP}${start.TSTAMP}"/>
+      	<delete dir="${mockbox.build.dir}" />
+      	<mkdir dir="${mockbox.build.dir}" />
+
+		<concat destfile="${mockbox.build.dir}/${build.label}">Built on ${start.TODAY}</concat>
+		<!-- Copy src to mockbox namespace -->	
+      	<copy todir="${mockbox.build.dir}/mockbox/system">
+        	<fileset dir="${coldbox.src.dir}/system" includes="core/** testing/**" />
+        </copy>
+		<!-- Copy src to coldbox namespace -->
+      	<copy todir="${mockbox.build.dir}/coldbox/system">
+        	<fileset dir="${coldbox.src.dir}/system" includes="core/** testing/**" />
+        </copy>
+
+		<echo>Refactoring for coldbox absolute paths</echo>
+		<replace dir="${mockbox.build.dir}" value="/mockbox/system/" summary="yes"
+			includes="**/*.cfc **/*.cfm **/*.xml">
+			<replacetoken>/coldbox/system/</replacetoken>
+		</replace>
+		<echo>Refactoring for coldbox instantitation and cfc paths</echo>
+		<replace dir="${mockbox.build.dir}" value="mockbox.system." summary="yes"
+			includes="**/*.cfc **/*.cfm **/*.xml">
+			<replacetoken>coldbox.system.</replacetoken>
+		</replace>
+		<!--Copy text files to root folder-->
+		<copy todir="${mockbox.build.dir}/">
+			<fileset dir="${coldbox.src.dir}" includes="license.txt system/testing/readme.txt" />
+		</copy>
+
+		<!-- Execute ColdDoc -->
+		<colddoc packagenames="mockbox"  
+			sourcepath="${mockbox.build.dir}" destdir="${mockbox.build.dir}/api" 
+			title="MockBox ${mockbox.version}" />
+
+		<!-- Zip Bundle -->
+		<zip destfile="${dist.dir}/mockbox_${mockbox.version}.zip" basedir="${mockbox.build.dir}"></zip>
+	</target>
+
+
+	<target name="build.mvn.release" depends="project.update, build, mxunit.tests.run,coldbox.getversion,build.mockbox">
+	    <property name="mvn.repo.dest" value="local" />
+	    <property name="mvn.repo.dest" value="remote" />
+	    <property name="mvn.repo.id" value="mvn.repo.${mvn.repo.dest}" />
+	    <property name="maven.repo.local" location="${cfdistro.basedir}/artifacts" />
+		<mvn-repo id="mvn.repo.local" url="file://${maven.repo.local}/" />
+	   	<property name="mvn.type" value="release" />
+
+	   	<delete file="${dist.dir}/coldbox.zip" />
+	   	<delete file="${dist.dir}/coldbox-all.zip" />
+		<zip destfile="${dist.dir}/coldbox.zip" basedir="${src.dir}/coldbox/" 
+			excludes="testing/** testharness/** ApplicationTemplates/** install/** ant/**" />
+		<zip destfile="${dist.dir}/coldbox-all.zip" basedir="${src.dir}/coldbox/"/>
+
+		<pom-and-deploy pomid="coldbox.pom" packaging="zip" artifact="${dist.dir}/coldbox.zip"
+		 groupId="org.coldbox" artifactId="coldbox" version="${coldbox.version}" name="coldbox"/>
+		<pom-and-deploy pomid="coldbox-all.pom" packaging="zip" artifact="${dist.dir}/coldbox-all.zip"
+		 groupId="org.coldbox" artifactId="coldbox-all" version="${coldbox.version}" name="coldbox-all"/>
+		<pom-and-deploy pomid="mockbox.pom" packaging="zip" artifact="${dist.dir}/mockbox_${mockbox.version}.zip"
+		 groupId="org.coldbox" artifactId="mockbox" version="${mockbox.version}" name="mockbox"/>
+		
+	 	<!--  create an extension -->
+		<delete dir="${basedir}/extensionbase/" />
+		<mkdir dir="${basedir}/extensionbase/" />
+		<copy todir="${basedir}/extensionbase/applications/coldbox">
+			<fileset dir="${src.dir}/coldbox" />
+		</copy>
+		<antcontrib:runtarget target="extension.build" />
+		<delete dir="${basedir}/extensionbase/" />
+	
+        <!-- add the extension as well -->
+		<mvn-put artifact="${extension.dist}/${extension.archive}"
+			packaging="zip" repoId="${mvn.repo.id}" groupId="cfml.extensions"
+			artifactId="coldbox" version="${extension.version}" />
+
+	</target>
+
+
+
+		
+</project>

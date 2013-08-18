@@ -1,0 +1,23 @@
+<datasources>
+
+	<datasource 
+		name="coolblog" 
+		class="org.h2.Driver" 
+		database="coolblog"
+		username="@dsn.username@" 
+		password="@dsn.password@" 
+		jdbcstring="jdbc:h2:@user.home@/h2dbs/coolblog/coolblog"
+		jdbc="h2"
+		 />
+
+	<datasource 
+		name="cacheTest" 
+		class="org.h2.Driver" 
+		database="coolblog"
+		username="@dsn.username@" 
+		password="@dsn.password@" 
+		jdbcstring="jdbc:h2:@user.home@/h2dbs/cachetest/cachetest"
+		jdbc="h2"
+		 />
+
+</datasources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<src>
+	<project>
+		<src dest="@src.dir@/coldbox" type="git" 
+		uri="git://github.com/ColdBox/coldbox-platform.git" 
+		branch="master" user="" password="" />
+	</project>
+	<sources>
+	</sources>
+</src>

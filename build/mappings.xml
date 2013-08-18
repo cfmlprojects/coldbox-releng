@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<mappings>
+  <mapping physical="@src.dir@/coldbox" virtual="/coldbox"/>
+<mapping physical="/workspace/coldbox-releng/dist/localdev/mockbox" virtual="/mockbox"/>
+<mapping physical="@ext.mappings.dir@/org.riaforge/colddoc/1.0" virtual="/colddoc"/>
+<mapping physical="@ext.mappings.dir@/org.mxunit/core/2.1.3" virtual="/mxunit"/>
+<mapping physical="@ext.mappings.dir@/org.coldspringframework/coldspring/1.2" virtual="/coldspring"/>
+</mappings>
