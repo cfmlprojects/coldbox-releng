@@ -5,9 +5,13 @@
 	<property name="coldbox.src.dir" location="${src.dir}/coldbox" />
 
 	<target name="coldbox.getversion">
+		<tstamp prefix="start"/>
+		<property name="build.number" value="${start.DSTAMP}${start.TSTAMP}"/>
 		<loadfile srcFile="${src.dir}/coldbox/system/web/config/Settings.cfc" property="coldbox.version"/>
 		<antcontrib:propertyregex override="yes" property="coldbox.version" input="${coldbox.version}" 
 			regexp=".*?this.version\s+?=\s+?&quot;([^&quot;]+).*?" select="\1" />
+		<antcontrib:propertyregex override="yes" property="coldbox.version" input="${coldbox.version}" 
+			regexp="@build.number@" replace="${build.number}" />
 		<echo message="ColdBox Version: ${coldbox.version}" />
 	</target>
 
@@ -15,8 +19,21 @@
 		<mapping physical="@src.dir@/coldbox" virtual="/coldbox"/>
 	</target>
 
+	<target name="test">
+		<server-run> 
+		<!--
+			<get
+				src="http://${server.host}:${server.port.http}/coldbox/testharness/index.cfm"
+				retries="3" ignoreerrors="true"
+				dest="${temp.dir}/firedUpNowDelMe.html" />
+				-->
+			<testbox-rundirs basePath="${src.dir}/coldbox/testing/cases/" componentPath="coldbox.testing.cases" outputdir="${dist.dir}/testresults/"/>
+		</server-run>
+	</target>
+
 	<target name="build.test" depends="build">
-		<!-- temporarily turn off secondary cache as railo has a bug -->
+		<!-- temporarily turn off secondary cache as railo has a bug
+		 -->
 		<replaceregexp file="${src.dir}/coldbox/testing/Application.cfc" match="secondarycacheenabled = true" replace="secondarycacheenabled = false" byline="false" flags="g,s"/>
 		<dependency groupId="org.coldspringframework" artifactId="coldspring" version="1.2" mapping="/coldspring" />
 		<copy todir="${war.target.dir}">
@@ -34,22 +51,19 @@
 			default-type="default-query"
 	    	custom="${cache.props}"/>
 
-		<server-run>
+		<server-run> 
 		<!--
 			<get
 				src="http://${server.host}:${server.port.http}/coldbox/testharness/index.cfm"
 				retries="3" ignoreerrors="true"
 				dest="${temp.dir}/firedUpNowDelMe.html" />
 				-->
-			<antcontrib:runtarget target="mxunit.tests.subdirectories" />
+			<testbox-rundirs basePath="${src.dir}/coldbox/testing/cases/" componentPath="coldbox.testing.cases" outputdir="${dist.dir}/testresults/"/>
 		</server-run>
-		<!-- temporarily turn off secondary cache as railo has a bug -->
-		<replaceregexp file="${dist.dir}/testresults/web/mxunitdirectorytestsuite_1.xml" match=".*?&lt;testsuite" replace="&lt;testsuite" byline="false" flags="g,s"/>
 	</target>
 
 	<target name="build.mockbox" depends="coldbox.getversion">
 		<property name="mockbox.build.dir" location="${dist.dir}/mockbox/" />
-		<tstamp prefix="start"/>
 		<property name="mockbox.version" value="${coldbox.version}"/>
 		<property name="build.label" value="mockbox-buildID-${start.DSTAMP}${start.TSTAMP}"/>
       	<delete dir="${mockbox.build.dir}" />
@@ -89,8 +103,99 @@
 		<zip destfile="${dist.dir}/mockbox_${mockbox.version}.zip" basedir="${mockbox.build.dir}/mockbox"></zip>
 	</target>
 
+	<target name="build.testbox">
+		<property name="testbox.build.dir" location="${dist.dir}/testbox/" />
+		<tstamp prefix="start"/>
+		<property name="testbox.version" value="1.1.0"/>
+		<property name="build.number" value="${start.DSTAMP}${start.TSTAMP}"/>
+		<property name="build.label" value="testbox-buildID-${build.number}"/>
+      	<delete dir="${testbox.build.dir}" />
+      	<mkdir dir="${testbox.build.dir}" />
 
-	<target name="build.mvn.release" depends="project.update, build.test, coldbox.getversion, build.mockbox">
+		<!-- Copy src to TestBox namespace -->	
+      	<copy todir="${testbox.build.dir}/testbox/system/testing">
+        	<fileset dir="${coldbox.src.dir}/system/testing" />
+        </copy>
+		<copy todir="${testbox.build.dir}/testbox/system/core/dynamic">
+        	<fileset dir="${coldbox.src.dir}/system/core/dynamic" />
+        </copy>
+		<copy todir="${testbox.build.dir}/testbox/system/core/util">
+        	<fileset dir="${coldbox.src.dir}/system/core/util" />
+        </copy>
+		<copy todir="${testbox.build.dir}/testbox/system/core/conversion">
+        	<fileset dir="${coldbox.src.dir}/system/core/conversion" />
+        </copy>
+		<copy todir="${testbox.build.dir}/runner-template">
+        	<fileset dir="${coldbox.src.dir}/ApplicationTemplates/testbox-runner" />
+        </copy>
+		<copy todir="${testbox.build.dir}/runner">
+        	<fileset dir="${coldbox.src.dir}/test-runner" />
+        </copy>
+        <copy todir="${testbox.build.dir}/browser">
+        	<fileset dir="${coldbox.src.dir}/test-browser" />
+        </copy>
+		<copy todir="${testbox.build.dir}/samples">
+        	<fileset dir="${coldbox.src.dir}/testing/cases/testing">
+        		<exclude name="**/BaseTestCaseTest.cfc" />
+        	</fileset>
+        </copy>
+		
+		<!-- cleanup coldbox platform specific stuff -->
+		<delete dir="${testbox.build.dir}/testbox/system/testing/mock" />
+		<delete file="${testbox.build.dir}/testbox/system/testing/BaseHandlerTest.cfc" />
+		<delete file="${testbox.build.dir}/testbox/system/testing/BaseInterceptorTest.cfc" />
+		<delete file="${testbox.build.dir}/testbox/system/testing/BaseModelTest.cfc" />
+		<delete file="${testbox.build.dir}/testbox/system/testing/BasePluginTest.cfc" />
+		<delete file="${testbox.build.dir}/testbox/system/core/util/Validator.cfc" />
+		<delete file="${testbox.build.dir}/testbox/system/core/util/Zip.cfc" />
+		<delete file="${testbox.build.dir}/testbox/system/core/util/RequestBuffer.cfc" />
+		
+		<!--Copy text files to root folder-->
+		<copy todir="${testbox.build.dir}/">
+			<fileset file="${coldbox.src.dir}/license.txt" />
+			<fileset file="${coldbox.src.dir}/system/testing/mockbox.txt" />
+			<fileset file="${coldbox.src.dir}/system/testing/testbox.txt" />
+		</copy>
+		
+		<!-- Replace Build Numbers -->
+		<replaceregexp match='@build.number@' replace="${build.number}" flags="ig" byline="true">
+		  <fileset dir="${testbox.build.dir}">
+		  </fileset>
+		</replaceregexp>
+						
+		<echo>Refactoring for coldbox absolute paths</echo>
+		<replace dir="${testbox.build.dir}" value="/testbox/system/" summary="yes">
+		  	<include name="**/*.cfc" />
+			<include name="**/*.cfm" />
+			<include name="**/*.xml" />
+			<replacetoken>/coldbox/system/</replacetoken>
+		</replace>
+		
+		<echo>Refactoring for testbox instantitation and cfc paths</echo>
+		<replace dir="${testbox.build.dir}" value="testbox.system." summary="yes">
+		  	<include name="**/*.cfc" />
+			<include name="**/*.cfm" />
+			<include name="**/*.xml" />
+			<replacetoken>coldbox.system.</replacetoken>
+		</replace>
+		
+		<!-- Execute ColdDoc -->
+		<colddoc packagenames="testbox"  
+			sourcepath="${testbox.build.dir}" destdir="${testbox.build.dir}/apidocs" 
+			title="TestBox ${testbox.version}" />
+
+		<!-- Zip API Docs -->
+		<zip destfile="${dist.dir}/TestBoxDocs-${testbox.version}.zip" basedir="${testbox.build.dir}/apidocs"></zip>
+				
+		<!-- Zip Bundle -->
+		<zip destfile="${dist.dir}/testbox_${testbox.version}.zip" basedir="${testbox.build.dir}"></zip>
+		
+		<!-- Cleanup -->
+		<delete dir="${testbox.build.dir}" />
+	</target>
+
+
+	<target name="build.mvn.release" depends="project.update, build.test, coldbox.getversion, build.mockbox, build.testbox">
 	    <property name="mvn.repo.dest" value="local" />
 	    <property name="mvn.repo.dest" value="remote" />
 	    <property name="mvn.repo.id" value="mvn.repo.${mvn.repo.dest}" />
@@ -110,6 +215,8 @@
 		 groupId="org.coldbox" artifactId="coldbox-all" version="${coldbox.version}" name="coldbox-all"/>
 		<pom-and-deploy pomid="mockbox.pom" packaging="zip" artifact="${dist.dir}/mockbox_${mockbox.version}.zip"
 		 groupId="org.coldbox" artifactId="mockbox" version="${mockbox.version}" name="mockbox"/>
+		<pom-and-deploy pomid="testbox.pom" packaging="zip" artifact="${dist.dir}/testbox_${testbox.version}.zip"
+		 groupId="org.coldbox" artifactId="testbox" version="${testbox.version}" name="testbox"/>
 		
 	 	<!--  create an extension -->
 		<delete dir="${basedir}/extensionbase/" />
