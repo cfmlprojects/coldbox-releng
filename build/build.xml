@@ -188,7 +188,8 @@
 		<zip destfile="${dist.dir}/TestBoxDocs-${testbox.version}.zip" basedir="${testbox.build.dir}/apidocs"></zip>
 				
 		<!-- Zip Bundle -->
-		<zip destfile="${dist.dir}/testbox_${testbox.version}.zip" basedir="${testbox.build.dir}"></zip>
+		<zip destfile="${dist.dir}/testbox_${testbox.version}.zip" basedir="${testbox.build.dir}/testbox"></zip>
+		<zip destfile="${dist.dir}/testbox-all_${testbox.version}.zip" basedir="${testbox.build.dir}"></zip>
 		
 		<!-- Cleanup -->
 		<delete dir="${testbox.build.dir}" />
@@ -217,6 +218,8 @@
 		 groupId="org.coldbox" artifactId="mockbox" version="${mockbox.version}" name="mockbox"/>
 		<pom-and-deploy pomid="testbox.pom" packaging="zip" artifact="${dist.dir}/testbox_${testbox.version}.zip"
 		 groupId="org.coldbox" artifactId="testbox" version="${testbox.version}" name="testbox"/>
+		<pom-and-deploy pomid="testboxall.pom" packaging="zip" artifact="${dist.dir}/testbox-all_${testbox.version}.zip"
+		 groupId="org.coldbox" artifactId="testbox-all" version="${testbox.version}" name="testbox-all"/>
 		
 	 	<!--  create an extension -->
 		<delete dir="${basedir}/extensionbase/" />
