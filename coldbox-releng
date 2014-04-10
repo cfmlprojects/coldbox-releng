@@ -72,5 +72,5 @@ do
     parameters="$parameters -D$var"
 done
 $ANTCMD $target -Dbasedir=. $parameters
-	
-			
+
+
